@@ -6,7 +6,10 @@ const PORT = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
-app.use(express.json());
+app.use(express.json([
+    "https://todo-projects-2051b.web.app",
+    "http://localhost:5173"
+]));
 app.use(cors());
 
 
@@ -48,7 +51,7 @@ async function run() {
             const result = await tasksCollection.insertOne(user)
             res.send(result)
         })
-        
+
         // task get by email in db
         app.get("/tasks/:email", async (req, res) => {
             const email = req.params.email;
@@ -58,19 +61,24 @@ async function run() {
             res.send(result)
         })
 
-        // task delete in db
+        // Helper function to convert ID to ObjectId if valid
+        const convertToObjectId = (id) => {
+            return ObjectId.isValid(id) ? new ObjectId(id) : id; // Return ObjectId or original ID
+        };
+
+        // Task delete in db
         app.delete("/tasks/:id", async (req, res) => {
             const id = req.params.id;
-            const query = { _id: id };
+            const query = { _id: convertToObjectId(id) }; // Convert ID for query
             const result = await tasksCollection.deleteOne(query);
-            res.send(result)
-        })
+            res.send(result);
+        });
 
-        // task update in db
+        // Task update in db
         app.put("/tasks-update/:id", async (req, res) => {
             const id = req.params.id;
             const data = req.body;
-            const query = { _id: id };
+            const query = { _id: convertToObjectId(id) }; // Convert ID for query
             const updateDoc = {
                 $set: {
                     title: data?.title,
@@ -79,11 +87,10 @@ async function run() {
                     date: data?.date,
                     email: data?.email
                 }
-            }
+            };
             const result = await tasksCollection.updateOne(query, updateDoc);
-            res.send(result)
-
-        })
+            res.send(result);
+        });
 
         // Drag & Drop Reorder Tasks API
         app.put('/tasks/reorder', async (req, res) => {
@@ -93,8 +100,14 @@ async function run() {
                 // Clear the existing tasks
                 await tasksCollection.deleteMany({});
 
+                // Convert task IDs before inserting
+                const tasksWithConvertedIds = tasks.map(task => ({
+                    ...task,
+                    _id: convertToObjectId(task._id) // Convert ID for each task
+                }));
+
                 // Insert the new order of tasks
-                await tasksCollection.insertMany(tasks);
+                await tasksCollection.insertMany(tasksWithConvertedIds);
 
                 res.status(200).send('Tasks reordered successfully');
             } catch (error) {
@@ -102,7 +115,6 @@ async function run() {
                 res.status(500).send('Error reordering tasks');
             }
         });
-
 
 
         // Connect the client to the server	(optional starting in v4.7)
