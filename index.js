@@ -31,20 +31,21 @@ async function run() {
         const usersCollection = db.collection("users")
         const tasksCollection = db.collection("tasks")
 
-        // save user in db
         app.post("/user/:email", async (req, res) => {
             const email = req.params.email;
-            const query = { email }
+            const query = { email:email };
             const user = req.body;
+        
             // check user already exist in db
-            const isExistUser = await usersCollection.findOne(query)
+            const isExistUser = await usersCollection.findOne(query);
             if (isExistUser) {
-                return res.send(isExistUser)
+                return res.send({ message: "User already exists", user: isExistUser });
             }
-
-            const result = await usersCollection.insertOne({ ...user, timestamp: Date.now() })
-            res.send(result)
-        })
+        
+            const result = await usersCollection.insertOne({ ...user, timestamp: Date.now() });
+            res.send(result);
+        });
+        
         // task store in db
         app.post("/tasks", async (req, res) => {
             const user = req.body;
